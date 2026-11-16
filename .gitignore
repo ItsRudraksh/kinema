@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+.env*.local
+data/orbis-diary.json
+.DS_Store
+
+.env.local (create this locally — never commit it; never prefix with NEXT_PUBLIC_)
+
+Security note: Since you shared your Read Access Token earlier in chat, consider
+regenerating it in TMDB Settings if you ever publish or share your repo. Keep it
+strictly inside .env.local so Next.js never bundles it to the browser.
+
+TMDB_ACCESS_TOKEN=YOUR_TMDB_READ_ACCESS_TOKEN_HERE
+TMDB_DEFAULT_REGION=IN
+.kinema-backup/

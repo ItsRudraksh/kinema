@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="KINEMA orbital cinema mark">
+  <rect width="512" height="512" fill="#06070A"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="256" cy="256" rx="158" ry="82" stroke="#38BDF8" stroke-width="8" transform="rotate(-34 256 256)"/>
+    <ellipse cx="256" cy="256" rx="158" ry="82" stroke="#F59E0B" stroke-width="10" transform="rotate(34 256 256)"/>
+    <circle cx="256" cy="256" r="54" stroke="#F4F4F5" stroke-width="7"/>
+    <path d="M256 215 291 235 291 277 256 297 221 277 221 235Z" stroke="#F59E0B" stroke-width="7"/>
+    <path d="M256 215 256 238 M291 235 271 247 M291 277 271 265 M256 297 256 274 M221 277 241 265 M221 235 241 247" stroke="#38BDF8" stroke-width="5"/>
+  </g>
+  <circle cx="256" cy="256" r="10" fill="#F59E0B"/>
+</svg>

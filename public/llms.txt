@@ -1,0 +1,21 @@
+# KINEMA
+
+> Interactive 3D WebGL Cinema Atlas & Personal Screening Diary covering Films, TV & Web Series, Anime, K-Dramas, and Documentaries.
+
+KINEMA transforms personal film logging from a static spreadsheet into a living 3D cosmos paired with high-craft editorial journaling and discovery tools.
+
+## Core Capabilities
+
+- **3D Poster Sphere & Holographic Core**: Interactive curved-poster Fibonacci sphere in WebGL (`Three.js` / `React Three Fiber`) with moon-like hover wave physics, category lenses, and a full-screen 360-degree interior hologram mode.
+- **Multi-Media Screening Diary**: Track films, episodic web series, anime, K-dramas, and documentaries with half-star ratings, viewing contexts, favorite quotes, spoiler-shielded notes, Four Favorites shelf, Criterion Closet shelf, and analytics.
+- **Franchise & Saga Roadmaps**: Maps TMDB movie collections chronologically with watch status and one-click watchlist queueing.
+- **Actor & Director Constellations**: Interactive radial orbit graph and chronological career timeline for cast and crew members.
+- **Spin-the-Globe Randomizer Suite**: Four decision modes — Physical Globe Spin & Lock, 35mm Time-Commitment Roulette, Tear-Seal Mystery Screening Ticket, and Six Degrees Similarity Compass.
+- **Watchlist OTT Streaming Radar**: Monitors watchlist titles for regional streaming availability and global platform fallbacks via TMDB + JustWatch.
+
+## Public Routes
+
+- `/`: Main 3D Cinema Atlas, trending pulse, and personal screening diary
+- `/manifest.webmanifest`: Progressive Web App installation manifest
+- `/sitemap.xml`: Canonical XML sitemap
+- `/robots.txt`: Crawler and AI search bot indexing directives

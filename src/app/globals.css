@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  --font-sans:
+    var(--font-instrument-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --color-void: #06070a;
+  --color-surface: #0d1017;
+  --color-surface-elevated: #141824;
+  --color-amber: #f59e0b;
+  --color-cyan: #38bdf8;
+  --color-emerald: #34d399;
+}
+
+:root {
+  color-scheme: dark;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: #06070a;
+    color: #f4f4f5;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior: none;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
+  }
+
+  body {
+    position: relative;
+    background-color: #06070a;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  button,
+  [role="button"],
+  .orbis-control {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+.root {
+  isolation: isolate;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.orbis-press {
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.orbis-press:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .orbis-card-hover {
+    transition:
+      transform 200ms var(--ease-out),
+      border-color 180ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .orbis-card-hover:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+}
+
+.orbis-tooltip {
+  transform-origin: var(--transform-origin);
+  transition:
+    transform 125ms var(--ease-out),
+    opacity 125ms var(--ease-out);
+}
+
+.orbis-tooltip[data-starting-style],
+.orbis-tooltip[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+.orbis-tooltip[data-instant] {
+  transition-duration: 0ms;
+}
+
+.orbis-popover {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+
+.orbis-popover[data-starting-style],
+.orbis-popover[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.orbis-dialog-backdrop {
+  transition: opacity 220ms var(--ease-out);
+}
+
+.orbis-dialog-backdrop[data-starting-style],
+.orbis-dialog-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.orbis-dialog-popup {
+  transform-origin: center;
+  transition:
+    opacity 240ms var(--ease-out),
+    transform 240ms var(--ease-out);
+}
+
+.orbis-dialog-popup[data-starting-style],
+.orbis-dialog-popup[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.orbis-drawer-backdrop {
+  transition: opacity 420ms var(--ease-drawer);
+}
+
+.orbis-drawer-backdrop[data-starting-style],
+.orbis-drawer-backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.orbis-drawer-popup {
+  transform: translate3d(0, var(--drawer-swipe-movement-y, 0px), 0);
+  transition: transform 480ms var(--ease-drawer);
+}
+
+.orbis-drawer-popup[data-swiping] {
+  transition-duration: 0ms;
+}
+
+.orbis-drawer-popup[data-starting-style],
+.orbis-drawer-popup[data-ending-style] {
+  transform: translate3d(0, 100%, 0);
+}
+
+@media (min-width: 768px) {
+  .orbis-drawer-popup {
+    transform: translate3d(var(--drawer-swipe-movement-x, 0px), 0, 0);
+  }
+  .orbis-drawer-popup[data-starting-style],
+  .orbis-drawer-popup[data-ending-style] {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+.orbis-glass {
+  background: rgba(13, 16, 23, 0.82);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.orbis-ticket-edge {
+  mask-image:
+    radial-gradient(circle at 0 50%, transparent 10px, black 10.5px),
+    radial-gradient(circle at 100% 50%, transparent 10px, black 10.5px);
+  mask-composite: intersect;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .orbis-tooltip,
+  .orbis-popover,
+  .orbis-dialog-popup,
+  .orbis-drawer-popup,
+  .orbis-press {
+    transition-property: opacity, background-color, border-color, color;
+    transition-duration: 180ms;
+    transform: none !important;
+  }
+}

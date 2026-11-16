@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-label="KINEMA">
+  <rect width="960" height="300" fill="#06070A"/>
+  <g transform="translate(150 150)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <ellipse cx="0" cy="0" rx="112" ry="58" stroke="#38BDF8" stroke-width="7" transform="rotate(-34)"/>
+    <ellipse cx="0" cy="0" rx="112" ry="58" stroke="#F59E0B" stroke-width="9" transform="rotate(34)"/>
+    <circle cx="0" cy="0" r="37" stroke="#F4F4F5" stroke-width="6"/>
+    <path d="M0 -27 24 -13 24 13 0 27 -24 13 -24 -13Z" stroke="#F59E0B" stroke-width="5"/>
+    <circle cx="0" cy="0" r="7" fill="#F59E0B" stroke="none"/>
+  </g>
+  <text x="315" y="190" fill="#F4F4F5" font-family="Instrument Serif, Georgia, serif" font-size="132" letter-spacing="10">KINEMA</text>
+  <circle cx="831" cy="186" r="7" fill="#F59E0B"/>
+</svg>
