@@ -36,6 +36,7 @@ import {
   Sparkles,
   Upload,
   Users,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOrbisStore } from "@/store/useOrbisStore";
@@ -71,6 +72,7 @@ export function DiarySection() {
     new Set(),
   );
   const [trendingDaily, setTrendingDaily] = useState<CosmosNode[]>([]);
+  const [ottBannerDismissed, setOttBannerDismissed] = useState(false);
 
   useEffect(() => {
     fetchJsonWithRetry<{ trending: CosmosNode[] }>("/api/tmdb/trending")
@@ -112,10 +114,15 @@ export function DiarySection() {
     [entries],
   );
 
-  const ottNewReleases = useMemo(
-    () => ottItems.filter((i) => i.flatrate.length > 0),
-    [ottItems],
-  );
+  // Live cross-check against `entries` so completing a Watchlist film removes it from the OTT banner in 0ms!
+  const ottNewReleases = useMemo(() => {
+    const activeWatchlistKeys = new Set(
+      entries.filter((e) => e.status === "watchlist").map((e) => e.key),
+    );
+    return ottItems.filter(
+      (i) => activeWatchlistKeys.has(i.entry.key) && i.flatrate.length > 0,
+    );
+  }, [ottItems, entries]);
 
   const stats = useMemo(() => {
     const completed = entries.filter((e) => e.status === "completed");
@@ -187,7 +194,7 @@ export function DiarySection() {
         count?: number;
       };
       if (data.entries) {
-        hydrate({ entries: data.entries, cosmosNodes, region });
+        hydrate({ entries: data.entries, cosmosNodes, region, replace: true });
         toast.success(`Imported ${data.count ?? data.entries.length} entries`);
       }
     } catch {
@@ -198,11 +205,11 @@ export function DiarySection() {
   return (
     <section
       id="diary"
-      className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 py-14 sm:py-20 space-y-16"
+      className="relative z-10 mx-auto max-w-6xl px-4 sm:px-8 pt-10 pb-24 sm:py-20 space-y-14 sm:space-y-16"
     >
       {/* Watchlist OTT Release Alert Banner */}
-      {ottNewReleases.length > 0 && (
-        <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.06] p-4 flex flex-wrap items-center justify-between gap-3">
+      {ottNewReleases.length > 0 && !ottBannerDismissed && (
+        <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.06] p-3.5 sm:p-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <span className="size-8 rounded-full bg-emerald-400/15 border border-emerald-400/35 flex items-center justify-center shrink-0">
               <Radio className="size-4 text-emerald-400" />
@@ -211,13 +218,13 @@ export function DiarySection() {
               <p className="font-mono text-[10px] uppercase tracking-widest text-emerald-300">
                 Watchlist OTT Radar · {region}
               </p>
-              <p className="text-sm text-white truncate">
+              <p className="text-xs sm:text-sm text-white truncate">
                 {formatCount(
                   ottNewReleases.length,
                   "watchlist title is",
                   "watchlist titles are",
                 )}{" "}
-                streaming now:{" "}
+                streaming:{" "}
                 <span className="text-emerald-200 font-medium">
                   {ottNewReleases
                     .slice(0, 3)
@@ -227,18 +234,27 @@ export function DiarySection() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setOttRadarOpen(true)}
-            className="KINEMA-press rounded-full bg-emerald-400 text-black px-3.5 py-1.5 text-xs font-semibold shrink-0"
-          >
-            Inspect Platforms
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setOttRadarOpen(true)}
+              className="orbis-press rounded-full bg-emerald-400 text-black px-3 py-1.5 text-xs font-semibold"
+            >
+              Inspect
+            </button>
+            <button
+              onClick={() => setOttBannerDismissed(true)}
+              aria-label="Dismiss OTT banner"
+              className="orbis-press rounded-full p-1.5 text-zinc-400 hover:text-white"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
       {/* Today's Top 10 Daily Trending Pulse */}
       {trendingDaily.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           <div className="flex items-end justify-between gap-4">
             <div>
               <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-cyan-400">
@@ -267,7 +283,7 @@ export function DiarySection() {
                     voteAverage: item.voteAverage,
                   })
                 }
-                className="KINEMA-press KINEMA-card-hover w-32 sm:w-36 shrink-0 text-left space-y-2 group"
+                className="orbis-press orbis-card-hover w-28 sm:w-36 shrink-0 text-left space-y-1.5 group"
               >
                 <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/10 bg-[#0d1017]">
                   <PosterImage
@@ -330,7 +346,7 @@ export function DiarySection() {
               return (
                 <div
                   key={item.key}
-                  className="KINEMA-card-hover rounded-2xl border border-white/10 bg-[#0d1017] p-3.5 flex gap-3.5 items-start"
+                  className="orbis-card-hover rounded-2xl border border-white/10 bg-[#0d1017] p-3.5 flex gap-3.5 items-start"
                 >
                   <button
                     onClick={() =>
@@ -341,7 +357,7 @@ export function DiarySection() {
                         releaseYear: item.releaseYear,
                       })
                     }
-                    className="KINEMA-press shrink-0"
+                    className="orbis-press shrink-0"
                   >
                     <PosterImage
                       posterPath={item.posterPath}
@@ -382,7 +398,7 @@ export function DiarySection() {
                         </span>
                         <button
                           onClick={() => stepEpisode(item, 1)}
-                          className="KINEMA-press flex items-center gap-1 rounded-lg bg-cyan-400/15 border border-cyan-400/35 px-2.5 py-1 text-xs font-medium text-cyan-200 hover:bg-cyan-400/25"
+                          className="orbis-press flex items-center gap-1 rounded-lg bg-cyan-400/15 border border-cyan-400/35 px-2.5 py-1 text-xs font-medium text-cyan-200 hover:bg-cyan-400/25"
                         >
                           <Plus className="size-3" />1 Ep
                         </button>
@@ -431,7 +447,7 @@ export function DiarySection() {
                 <button
                   key={`slot-${idx}`}
                   onClick={() => setCommandOpen(true)}
-                  className="KINEMA-press aspect-[2/3] rounded-2xl border border-dashed border-white/15 bg-white/[0.02] flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-amber-400/40"
+                  className="orbis-press aspect-[2/3] rounded-2xl border border-dashed border-white/15 bg-white/[0.02] flex flex-col items-center justify-center gap-2 p-4 text-center hover:border-amber-400/40"
                 >
                   <span className="font-mono text-xs text-zinc-500">
                     SLOT #{idx + 1}
@@ -453,7 +469,7 @@ export function DiarySection() {
                     releaseYear: fav.releaseYear,
                   })
                 }
-                className="KINEMA-press KINEMA-card-hover group relative aspect-[2/3] rounded-2xl overflow-hidden border border-amber-400/30 bg-[#0d1017] text-left"
+                className="orbis-press orbis-card-hover group relative aspect-[2/3] rounded-2xl overflow-hidden border border-amber-400/30 bg-[#0d1017] text-left"
               >
                 <PosterImage
                   posterPath={fav.posterPath}
@@ -476,7 +492,7 @@ export function DiarySection() {
       </div>
 
       {/* Main Diary Archive */}
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
           <div>
             <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-zinc-400">
@@ -487,53 +503,56 @@ export function DiarySection() {
             </h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center rounded-full border border-white/10 bg-[#0d1017] p-1">
+          {/* Single-row View Switcher + Settings Gear (Fits 360px Galaxy S24 without wrapping gear onto a new row!) */}
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex-1 md:flex-initial grid grid-cols-3 items-center rounded-full border border-white/10 bg-[#0d1017] p-1">
               <button
                 onClick={() => setView("timeline")}
-                className={`KINEMA-press flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                className={`orbis-press flex items-center justify-center gap-1.5 rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   view === "timeline"
                     ? "bg-white text-black"
                     : "text-zinc-300 hover:text-white"
                 }`}
               >
-                <List className="size-3.5" />
-                Timeline
+                <List className="size-3.5 shrink-0" />
+                <span>Timeline</span>
               </button>
               <button
                 onClick={() => setView("closet")}
-                className={`KINEMA-press flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                className={`orbis-press flex items-center justify-center gap-1.5 rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   view === "closet"
                     ? "bg-amber-400 text-black"
                     : "text-zinc-300 hover:text-white"
                 }`}
               >
-                <Award className="size-3.5" />
-                Criterion Closet
+                <Award className="size-3.5 shrink-0" />
+                <span>
+                  <span className="hidden sm:inline">Criterion </span>Closet
+                </span>
               </button>
               <button
                 onClick={() => setView("analytics")}
-                className={`KINEMA-press flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                className={`orbis-press flex items-center justify-center gap-1.5 rounded-full px-2.5 sm:px-3.5 py-1.5 text-xs font-medium whitespace-nowrap ${
                   view === "analytics"
                     ? "bg-cyan-400 text-black"
                     : "text-zinc-300 hover:text-white"
                 }`}
               >
-                <BarChart3 className="size-3.5" />
-                Analytics
+                <BarChart3 className="size-3.5 shrink-0" />
+                <span>Analytics</span>
               </button>
             </div>
 
             <Popover.Root>
               <Popover.Trigger
                 aria-label="Settings and backup"
-                className="KINEMA-press rounded-full border border-white/15 bg-[#0d1017] p-2.5 text-zinc-300 hover:text-white"
+                className="orbis-press shrink-0 rounded-full border border-white/15 bg-[#0d1017] p-2.5 text-zinc-300 hover:text-white"
               >
                 <Settings className="size-4" />
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Positioner sideOffset={10} align="end">
-                  <Popover.Popup className="KINEMA-popover KINEMA-glass z-40 w-72 rounded-2xl p-4 space-y-4">
+                  <Popover.Popup className="orbis-popover orbis-glass z-40 w-72 rounded-2xl p-4 space-y-4">
                     <div>
                       <label className="block font-mono text-[10px] uppercase tracking-widest text-zinc-400 mb-1.5">
                         Streaming Region (JustWatch)
@@ -558,8 +577,13 @@ export function DiarySection() {
                       <button
                         type="button"
                         onClick={() => {
-                          const { entries, region } = useOrbisStore.getState();
-                          const backup = { version: 1, region, entries };
+                          const { entries: curEntries, region: curRegion } =
+                            useOrbisStore.getState();
+                          const backup = {
+                            version: 1,
+                            region: curRegion,
+                            entries: curEntries,
+                          };
                           const blob = new Blob(
                             [JSON.stringify(backup, null, 2)],
                             { type: "application/json" },
@@ -576,12 +600,12 @@ export function DiarySection() {
                             1000,
                           );
                         }}
-                        className="KINEMA-press flex items-center justify-center gap-2 w-full rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-medium text-white"
+                        className="orbis-press flex items-center justify-center gap-2 w-full rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-medium text-white"
                       >
                         <Download className="size-3.5" />
                         Export Backup JSON
                       </button>
-                      <label className="KINEMA-press flex items-center justify-center gap-2 w-full rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-medium text-zinc-300 cursor-pointer">
+                      <label className="orbis-press flex items-center justify-center gap-2 w-full rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-medium text-zinc-300 cursor-pointer">
                         <Upload className="size-3.5" />
                         Import Backup JSON
                         <input
@@ -602,17 +626,17 @@ export function DiarySection() {
           </div>
         </div>
 
-        {/* Filter Chips */}
+        {/* Filter Chips — Clean horizontal swipe bar on mobile + Status Select */}
         {view === "timeline" && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
               {(
                 ["all", "film", "series", "anime", "drama", "doc"] as const
               ).map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  className={`KINEMA-press rounded-full px-3 py-1.5 text-xs border ${
+                  className={`orbis-press whitespace-nowrap rounded-full px-3 py-1.5 text-xs border shrink-0 ${
                     categoryFilter === cat
                       ? "border-cyan-400 bg-cyan-400/15 text-cyan-200"
                       : "border-white/10 text-zinc-400 hover:text-white"
@@ -627,7 +651,7 @@ export function DiarySection() {
               ariaLabel="Filter by watch status"
               value={statusFilter}
               onValueChange={setStatusFilter}
-              className="min-w-[140px]"
+              className="w-full sm:w-auto sm:min-w-[148px]"
               options={[
                 { value: "all", label: "All Statuses" },
                 { value: "completed", label: "Completed" },
@@ -660,14 +684,14 @@ export function DiarySection() {
                 <div className="flex flex-wrap justify-center gap-2.5">
                   <button
                     onClick={() => setCommandOpen(true)}
-                    className="KINEMA-press flex items-center gap-2 rounded-full bg-white text-black px-4 py-2 text-xs font-semibold"
+                    className="orbis-press flex items-center gap-2 rounded-full bg-white text-black px-4 py-2 text-xs font-semibold"
                   >
                     <Search className="size-3.5" />
                     Log Your First Title
                   </button>
                   <button
                     onClick={() => openRandomizer("ticket")}
-                    className="KINEMA-press flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs text-zinc-200"
+                    className="orbis-press flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs text-zinc-200"
                   >
                     <Sparkles className="size-3.5 text-amber-400" />
                     Draw Mystery Ticket
@@ -682,7 +706,7 @@ export function DiarySection() {
                   const spoilerVisible = unblurredSpoilers.has(item.key);
                   return (
                     <div className="pb-3.5">
-                      <article className="KINEMA-card-hover rounded-2xl border border-white/10 bg-[#0d1017] p-4 flex gap-4 items-start">
+                      <article className="orbis-card-hover rounded-2xl border border-white/10 bg-[#0d1017] p-3.5 sm:p-4 flex gap-3.5 sm:gap-4 items-start">
                         <button
                           onClick={() =>
                             openDossier(item.tmdbType, item.tmdbId, {
@@ -692,7 +716,7 @@ export function DiarySection() {
                               releaseYear: item.releaseYear,
                             })
                           }
-                          className="KINEMA-press shrink-0"
+                          className="orbis-press shrink-0"
                         >
                           <PosterImage
                             posterPath={item.posterPath}
@@ -703,16 +727,18 @@ export function DiarySection() {
                         </button>
 
                         <div className="min-w-0 flex-1 space-y-2">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1.5 sm:gap-3">
                             <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-zinc-400">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px] uppercase tracking-wider text-zinc-400 tabular-nums">
                                 <span className="text-cyan-300">
                                   {formatCategoryLabel(item.category)}
                                 </span>
                                 <span>·</span>
                                 <span>{item.watchedDate}</span>
-                                <span>·</span>
-                                <span>{item.context}</span>
+                                <span className="hidden xs:inline">·</span>
+                                <span className="text-zinc-500">
+                                  {item.context}
+                                </span>
                               </div>
                               <h3
                                 onClick={() =>
@@ -723,32 +749,32 @@ export function DiarySection() {
                                     releaseYear: item.releaseYear,
                                   })
                                 }
-                                className="font-serif text-xl sm:text-2xl text-white hover:text-amber-300 cursor-pointer break-words"
+                                className="font-serif text-lg sm:text-2xl leading-snug text-white hover:text-amber-300 cursor-pointer break-words mt-0.5"
                               >
                                 {item.title}{" "}
-                                <span className="text-sm font-mono text-zinc-500 tabular-nums">
+                                <span className="text-xs sm:text-sm font-mono text-zinc-500 tabular-nums">
                                   ({item.releaseYear})
                                 </span>
                               </h3>
                             </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex flex-wrap items-center gap-1.5 shrink-0 pt-0.5 sm:pt-0">
                               {item.collectionName && (
                                 <button
                                   onClick={() =>
                                     openDossier(item.tmdbType, item.tmdbId)
                                   }
-                                  className="hidden sm:inline-flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 font-mono text-[10px] text-amber-200"
+                                  className="inline-flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-200"
                                 >
-                                  <Layers className="size-3" />
+                                  <Layers className="size-2.5" />
                                   Saga
                                 </button>
                               )}
-                              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[11px] text-zinc-300">
+                              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 font-mono text-[10px] sm:text-[11px] text-zinc-300">
                                 {item.status.replace("_", " ")}
                               </span>
                               {item.rating && (
-                                <span className="rounded-full bg-amber-400/15 border border-amber-400/35 px-2.5 py-1 font-mono text-xs font-semibold text-amber-300 tabular-nums">
+                                <span className="rounded-full bg-amber-400/15 border border-amber-400/35 px-2.5 py-0.5 font-mono text-[11px] sm:text-xs font-semibold text-amber-300 tabular-nums">
                                   {item.rating.toFixed(1)} ★
                                 </span>
                               )}
@@ -756,13 +782,13 @@ export function DiarySection() {
                           </div>
 
                           {item.quote && (
-                            <p className="font-serif italic text-base text-amber-200/90">
+                            <p className="font-serif italic text-sm sm:text-base text-amber-200/90 leading-snug">
                               “{item.quote}”
                             </p>
                           )}
 
                           {item.note && (
-                            <p className="text-sm text-zinc-300 leading-relaxed">
+                            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
                               {item.note}
                             </p>
                           )}
@@ -813,7 +839,7 @@ export function DiarySection() {
 
         {/* VIEW 2: CRITERION CLOSET */}
         {view === "closet" && (
-          <div className="rounded-3xl border border-amber-400/20 bg-gradient-to-b from-[#11141e] to-[#080a0f] p-6 sm:p-8 space-y-6">
+          <div className="rounded-3xl border border-amber-400/20 bg-gradient-to-b from-[#11141e] to-[#080a0f] p-5 sm:p-8 space-y-6">
             <div>
               <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400">
                 4.5★+ & Favorites Shelf
@@ -833,7 +859,7 @@ export function DiarySection() {
                   <button
                     key={item.key}
                     onClick={() => openDossier(item.tmdbType, item.tmdbId)}
-                    className="KINEMA-press KINEMA-card-hover text-left space-y-2"
+                    className="orbis-press orbis-card-hover text-left space-y-2"
                   >
                     <PosterImage
                       posterPath={item.posterPath}
@@ -871,7 +897,7 @@ export function DiarySection() {
                   <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-400">
                     {kpi.label}
                   </p>
-                  <p className="mt-1 font-serif text-4xl text-white tabular-nums">
+                  <p className="mt-1 font-serif text-3xl sm:text-4xl text-white tabular-nums">
                     <NumberFlow value={kpi.value} />
                   </p>
                 </div>
@@ -885,7 +911,7 @@ export function DiarySection() {
                     <Users className="size-3.5" />
                     Your Most-Watched Actors & Directors
                   </span>
-                  <span className="font-mono text-[10px] text-zinc-500">
+                  <span className="font-mono text-[10px] text-zinc-500 hidden sm:inline">
                     Click to open Constellation
                   </span>
                 </div>
@@ -894,7 +920,7 @@ export function DiarySection() {
                     <button
                       key={p.id}
                       onClick={() => openPerson(p.id)}
-                      className="KINEMA-press rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white hover:border-cyan-400/50 flex items-center gap-2"
+                      className="orbis-press rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white hover:border-cyan-400/50 flex items-center gap-2"
                     >
                       <span>{p.name}</span>
                       <span className="font-mono text-[10px] text-cyan-300 tabular-nums">
@@ -963,7 +989,7 @@ export function DiarySection() {
           </p>
         </div>
         <span className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-          LOCAL ARCHIVE · {region}
+          CLOUD ARCHIVE · {region}
         </span>
       </footer>
     </section>

@@ -126,7 +126,7 @@ function mergeCosmosWithEntries(
 
   for (const n of nodes) {
     if (!result.has(n.key)) {
-      result.set(n.key, { ...n, diary: byKey.get(n.key) });
+      result.set(n.key, { ...n, diary: undefined, source: "starter" });
     }
   }
   return Array.from(result.values()).slice(0, 144);
@@ -161,11 +161,15 @@ export const useOrbisStore = create<OrbisState>()(
         const nextEntries = shouldReplace
           ? serverEntries
           : mergeEntriesByTimestamp(get().entries, serverEntries);
-        set({
+        const watchlistKeys = new Set(
+          nextEntries.filter((e) => e.status === "watchlist").map((e) => e.key),
+        );
+        set((s) => ({
           entries: nextEntries,
           cosmosNodes: mergeCosmosWithEntries(cosmosNodes, nextEntries),
+          ottItems: s.ottItems.filter((i) => watchlistKeys.has(i.entry.key)),
           region: region || get().region || "IN",
-        });
+        }));
       },
 
       setLens: (lens) => set({ lens }),
@@ -192,12 +196,31 @@ export const useOrbisStore = create<OrbisState>()(
 
       fetchOttRadar: async () => {
         const region = get().region;
+        const watchlistKeys = new Set(
+          get()
+            .entries.filter((e) => e.status === "watchlist")
+            .map((e) => e.key),
+        );
+        if (watchlistKeys.size === 0) {
+          set({ ottItems: [], ottLoading: false });
+          return;
+        }
         set({ ottLoading: true });
         try {
           const data = await fetchJsonWithRetry<{ items: OttRadarItem[] }>(
             `/api/tmdb/ott-radar?region=${region}`,
           );
-          set({ ottItems: data.items ?? [] });
+          // Re-verify against current client watchlist so race conditions never show completed films
+          const latestWatchlistKeys = new Set(
+            get()
+              .entries.filter((e) => e.status === "watchlist")
+              .map((e) => e.key),
+          );
+          set({
+            ottItems: (data.items ?? []).filter((i) =>
+              latestWatchlistKeys.has(i.entry.key),
+            ),
+          });
         } catch {
           // silent if offline
         } finally {
@@ -235,16 +258,45 @@ export const useOrbisStore = create<OrbisState>()(
           ...prevEntries.filter((e) => e.key !== entry.key),
         ];
 
-        set((s) => ({
-          entries: updated,
-          cosmosNodes: mergeCosmosWithEntries(s.cosmosNodes, updated),
-        }));
+        set((s) => {
+          const nextNodes = mergeCosmosWithEntries(s.cosmosNodes, updated);
+          // Immediately remove from ottItems if no longer on Watchlist!
+          const nextOttItems =
+            entry.status === "watchlist"
+              ? s.ottItems.map((item) =>
+                  item.entry.key === entry.key ? { ...item, entry } : item,
+                )
+              : s.ottItems.filter((item) => item.entry.key !== entry.key);
 
-        void fetch("/api/diary", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ entry }),
-        }).catch(() => {});
+          const nextFocused =
+            s.focusedNode?.key === entry.key
+              ? (nextNodes.find((n) => n.key === entry.key) ?? s.focusedNode)
+              : s.focusedNode;
+
+          return {
+            entries: updated,
+            cosmosNodes: nextNodes,
+            ottItems: nextOttItems,
+            focusedNode: nextFocused,
+          };
+        });
+
+        try {
+          await fetch("/api/diary", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ entry }),
+          });
+          // If newly added to watchlist, scan OTT Radar in background
+          if (
+            entry.status === "watchlist" &&
+            prevExisting?.status !== "watchlist"
+          ) {
+            void get().fetchOttRadar();
+          }
+        } catch {
+          // offline fallback
+        }
 
         if (!silent) {
           toast.success(`Logged "${entry.title}"`, {
@@ -274,10 +326,18 @@ export const useOrbisStore = create<OrbisState>()(
         const removed = prevEntries.find((e) => e.key === key);
         const next = prevEntries.filter((e) => e.key !== key);
 
-        set((s) => ({
-          entries: next,
-          cosmosNodes: mergeCosmosWithEntries(s.cosmosNodes, next),
-        }));
+        set((s) => {
+          const nextNodes = mergeCosmosWithEntries(s.cosmosNodes, next);
+          return {
+            entries: next,
+            cosmosNodes: nextNodes,
+            ottItems: s.ottItems.filter((item) => item.entry.key !== key),
+            focusedNode:
+              s.focusedNode?.key === key
+                ? { ...s.focusedNode, diary: undefined }
+                : s.focusedNode,
+          };
+        });
 
         void fetch(`/api/diary?key=${encodeURIComponent(key)}`, {
           method: "DELETE",

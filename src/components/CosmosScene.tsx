@@ -45,13 +45,10 @@ const VERTEX_SHADER = /* glsl */ `
     vUvRect = aUvRect;
     vMeta = aMeta;
 
-    // Extract instance anchor position & outward radial direction in globe space
     vec3 instCenter = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     float instRadius = max(length(instCenter), 1.0);
     vec3 instDir = instCenter / instRadius;
 
-    // Spherical curvature: bend plane vertices along a spherical cap matching instRadius!
-    // Outside (uExplored=0): convex wrap around globe; Inside (uExplored=1): concave wrap facing viewer
     float curveSign = 1.0 - 2.0 * uExplored;
     float theta = position.x / instRadius;
     float phi = position.y / instRadius;
@@ -61,22 +58,16 @@ const VERTEX_SHADER = /* glsl */ `
       curveSign * instRadius * (cos(theta) * cos(phi) - 1.0)
     );
 
-    // Moon-like tidal attraction toward mouse hover + subtle tangential repulsion ring
     float align = dot(instDir, normalize(uHoverLocalDir));
     float tide = smoothstep(0.84, 0.985, align) * uHoverStrength * (1.0 - uExplored * 0.45);
     float repelBand = smoothstep(0.66, 0.85, align) * (1.0 - smoothstep(0.86, 0.97, align)) * uHoverStrength;
 
     vTide = tide;
-
-    // Slightly enlarge the attracted poster in local space
     curvedLocal.xy *= (1.0 + tide * 0.14);
 
     vec4 globePos = instanceMatrix * vec4(curvedLocal, 1.0);
-
-    // Radial tidal lift toward the pointer (moon -> wave)
     globePos.xyz += instDir * (tide * 0.34);
 
-    // Subtle tangential parting around the hovered poster
     vec3 tangentAway = instDir - uHoverLocalDir * align;
     float tLen = length(tangentAway);
     if (tLen > 0.001) {
@@ -114,9 +105,9 @@ const FRAGMENT_SHADER = /* glsl */ `
     float border = clamp(step(0.92, centered.x) + step(0.94, centered.y), 0.0, 1.0);
 
     vec3 rimColor = vec3(0.24, 0.28, 0.36);
-    if (vMeta.x > 2.5) rimColor = vec3(0.96, 0.62, 0.04);      // Favorite Amber
-    else if (vMeta.x > 1.5) rimColor = vec3(0.22, 0.74, 0.97); // Watchlist Cyan
-    else if (vMeta.x > 0.5) rimColor = vec3(0.20, 0.83, 0.60); // Watched Emerald
+    if (vMeta.x > 2.5) rimColor = vec3(0.96, 0.62, 0.04);
+    else if (vMeta.x > 1.5) rimColor = vec3(0.22, 0.74, 0.97);
+    else if (vMeta.x > 0.5) rimColor = vec3(0.20, 0.83, 0.60);
 
     float innerFrame = (vMeta.z > 0.5)
       ? (step(0.85, centered.x) * (1.0 - step(0.89, centered.x)))
@@ -303,7 +294,6 @@ function GlobeInner({
     [atlasTexture],
   );
 
-  // 8x12 subdivided geometry so posters bend seamlessly onto spherical curvature!
   const geometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(0.64, 0.96, 8, 12);
     const uvRects = new Float32Array(ATLAS_COLS * ATLAS_ROWS * 4);
@@ -354,7 +344,6 @@ function GlobeInner({
     metaAttr.needsUpdate = true;
   }, [count, geometry, lens, nodes, shared, spinTriggerCount]);
 
-  // High-velocity Spin & Lock trigger
   useEffect(() => {
     if (spinTriggerCount > shared.current.lastSpinTrigger) {
       shared.current.lastSpinTrigger = spinTriggerCount;
@@ -389,42 +378,31 @@ function GlobeInner({
     );
     shaderMaterial.uniforms.uExplored.value = targetExplored.current;
 
-    // Responsive camera distance & vertical offset for mobile portrait screens!
+    // Since mobile now renders the globe in its own dedicated center stage box,
+    // use a clean balanced camera distance that fills the stage without clipping!
     const aspect = size.width / Math.max(size.height, 1);
-    const isNarrowMobile = aspect < 0.75;
-    const baseZ = isNarrowMobile ? 12.6 : 8.7;
+    const baseZ = aspect < 0.85 ? 9.3 : 8.7;
     const spinBoostZ = shared.current.spinningMode ? 1.15 : 0;
     const camZ = THREE.MathUtils.lerp(
       baseZ + spinBoostZ,
       0.02,
       targetExplored.current,
     );
-    const camY = THREE.MathUtils.lerp(
-      isNarrowMobile ? 0.52 : 0,
-      0,
-      targetExplored.current,
-    );
 
-    camera.position.set(0, camY, camZ);
-    camera.lookAt(
-      0,
-      isExplored ? 0 : isNarrowMobile ? -0.32 : 0,
-      isExplored ? -5 : 0,
-    );
+    camera.position.set(0, 0, camZ);
+    camera.lookAt(0, 0, isExplored ? -5 : 0);
 
-    // Scroll shrink transform without React re-renders
     if (groupRef.current) {
       const scrollRatio = Math.min(
         1,
         typeof window !== "undefined" ? window.scrollY / 480 : 0,
       );
-      const shrinkScale = isExplored ? 1 : 1 - scrollRatio * 0.45;
+      const shrinkScale = isExplored ? 1 : 1 - scrollRatio * 0.42;
       groupRef.current.scale.setScalar(shrinkScale);
     }
 
     const ds = shared.current;
 
-    // Smooth ease to locked winner angle after spin settles
     if (ds.targetRotY !== null && ds.targetRotX !== null && !ds.dragging) {
       ds.rotY = THREE.MathUtils.lerp(
         ds.rotY,
@@ -457,7 +435,6 @@ function GlobeInner({
 
       ds.rotX = THREE.MathUtils.clamp(ds.rotX, -1.05, 1.05);
 
-      // Spin & Lock detection -> pick closest matching candidate & ease directly under reticle!
       if (
         ds.spinningMode &&
         !ds.spinSettled &&
@@ -504,7 +481,6 @@ function GlobeInner({
 
         const winner = nodes[bestIdx];
         if (winner) {
-          // Compute exact target rotation to center the winner right under the reticle!
           const [wx, wy, wz] = fibonacciSpherePoint(
             bestIdx,
             count,
@@ -530,7 +506,6 @@ function GlobeInner({
       groupRef.current.rotation.x = ds.rotX;
       groupRef.current.rotation.y = ds.rotY;
 
-      // Compute moon-like hover attraction vector in globe-local coordinates
       if (ds.pointerActive && !ds.dragging && !reduceMotion) {
         ndcVec.set(ds.pointerNdcX, ds.pointerNdcY);
         rayHelper.setFromCamera(ndcVec, camera);
@@ -538,7 +513,6 @@ function GlobeInner({
         if (isExplored) {
           worldHit.copy(rayHelper.ray.direction).normalize();
         } else {
-          // Analytic intersection against front hemisphere for smooth orbital hover
           const ray = rayHelper.ray;
           const b = ray.origin.dot(ray.direction);
           const c =
@@ -552,7 +526,6 @@ function GlobeInner({
               .addScaledVector(ray.direction, Math.max(t, 0.1))
               .normalize();
           } else {
-            // Grazing orbit outside sphere edge: pull nearest limb!
             const closest = ray.origin
               .clone()
               .addScaledVector(ray.direction, -b)
@@ -646,7 +619,6 @@ function GlobeInner({
         }}
       />
 
-      {/* Core void silhouette */}
       <mesh>
         <sphereGeometry args={[2.52, 32, 32]} />
         <meshBasicMaterial
@@ -657,7 +629,6 @@ function GlobeInner({
         />
       </mesh>
 
-      {/* Stark holographic orbital rings */}
       <group ref={ringsRef}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <ringGeometry args={[3.68, 3.7, 128]} />
@@ -842,7 +813,6 @@ export function CosmosScene(props: CosmosSceneProps) {
           <GlobeInner {...props} shared={shared} onHoverTitle={setHoverTitle} />
         </Canvas>
 
-        {/* Subtle desktop hover readout */}
         {hoverTitle && (
           <div className="pointer-events-none hidden md:flex items-center gap-2 absolute top-24 right-8 z-20 rounded-full orbis-glass px-3.5 py-1.5 text-xs text-white">
             <span className="size-1.5 rounded-full bg-cyan-400" />

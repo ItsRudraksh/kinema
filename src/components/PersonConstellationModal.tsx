@@ -34,6 +34,14 @@ export function PersonConstellationModal() {
   const [roleFilter, setRoleFilter] = useState<DeptFilter>("all");
   const [hideTalkArchive, setHideTalkArchive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewportWidth, setViewportWidth] = useState(1024);
+
+  useEffect(() => {
+    const updateWidth = () => setViewportWidth(window.innerWidth);
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   const loadPerson = useCallback(async () => {
     if (!personTargetId) return;
@@ -110,6 +118,11 @@ export function PersonConstellationModal() {
     [filteredCredits, entryMap],
   );
 
+  // Adaptive Orbit capacity: 10 on mobile (<640px), 16 on tablet, 22 on desktop so posters never pile up!
+  const maxOrbitCount =
+    viewportWidth < 640 ? 10 : viewportWidth < 1024 ? 16 : 22;
+  const innerRingMax = viewportWidth < 640 ? 4 : viewportWidth < 1024 ? 6 : 8;
+
   const orbitNodes = useMemo(() => {
     const sample = [...filteredCredits]
       .sort((a, b) => {
@@ -118,24 +131,28 @@ export function PersonConstellationModal() {
         if (aLogged !== bLogged) return bLogged - aLogged;
         return b.popularity - a.popularity;
       })
-      .slice(0, 22);
+      .slice(0, maxOrbitCount);
 
     return sample.map((credit, idx) => {
-      const ring = idx < 8 ? 1 : 2;
+      const ring = idx < innerRingMax ? 1 : 2;
       const ringCount =
-        ring === 1 ? Math.min(8, sample.length) : sample.length - 8;
-      const idxInRing = ring === 1 ? idx : idx - 8;
+        ring === 1
+          ? Math.min(innerRingMax, sample.length)
+          : sample.length - innerRingMax;
+      const idxInRing = ring === 1 ? idx : idx - innerRingMax;
+      const angleOffset = ring === 1 ? -Math.PI / 2 : -Math.PI / 2 + 0.28;
       const angle =
-        (idxInRing / Math.max(ringCount, 1)) * Math.PI * 2 - Math.PI / 2;
-      const radiusX = ring === 1 ? 23 : 39;
-      const radiusY = ring === 1 ? 22 : 36;
+        (idxInRing / Math.max(ringCount, 1)) * Math.PI * 2 + angleOffset;
+
+      const radiusX = ring === 1 ? 22 : 39;
+      const radiusY = ring === 1 ? 21 : 37;
       return {
         credit,
         x: 50 + Math.cos(angle) * radiusX,
         y: 50 + Math.sin(angle) * radiusY,
       };
     });
-  }, [filteredCredits, entryMap]);
+  }, [filteredCredits, entryMap, maxOrbitCount, innerRingMax]);
 
   const groupedByYear = useMemo(() => {
     const groups = new Map<string, PersonCreditNode[]>();
@@ -166,12 +183,12 @@ export function PersonConstellationModal() {
     >
       <Dialog.Portal>
         <Dialog.Backdrop className="orbis-dialog-backdrop fixed inset-0 z-50 bg-black/80 backdrop-blur-md" />
-        <Dialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
-          <Dialog.Popup className="orbis-dialog-popup orbis-glass w-full max-w-4xl h-[90dvh] rounded-3xl flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 p-4 sm:p-5 shrink-0">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="size-12 rounded-full overflow-hidden border border-amber-400/40 bg-white/5 flex items-center justify-center shrink-0">
+        <Dialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-6">
+          <Dialog.Popup className="orbis-dialog-popup orbis-glass w-full max-w-4xl h-[92dvh] sm:h-[90dvh] rounded-3xl flex flex-col overflow-hidden">
+            {/* Compact Responsive Header */}
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3.5 py-3 sm:p-5 shrink-0">
+              <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                <div className="size-10 sm:size-12 rounded-full overflow-hidden border border-amber-400/40 bg-white/5 flex items-center justify-center shrink-0">
                   {person?.profilePath ? (
                     <img
                       src={`/api/poster?path=${encodeURIComponent(person.profilePath)}&size=w185`}
@@ -183,14 +200,14 @@ export function PersonConstellationModal() {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400">
-                    Talent Constellation · {person?.department ?? "Filmography"}
+                  <p className="font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-amber-400 truncate">
+                    Constellation · {person?.department ?? "Filmography"}
                   </p>
-                  <Dialog.Title className="font-serif text-2xl sm:text-3xl text-white truncate">
+                  <Dialog.Title className="font-serif text-xl sm:text-3xl text-white truncate leading-tight">
                     {person?.name ?? "Mapping Constellation…"}
                   </Dialog.Title>
                   {person && (
-                    <p className="font-mono text-[11px] text-zinc-400 tabular-nums">
+                    <p className="font-mono text-[10px] sm:text-[11px] text-zinc-400 tabular-nums">
                       Watched{" "}
                       <span className="text-emerald-300 font-semibold">
                         {seenCount}
@@ -198,52 +215,51 @@ export function PersonConstellationModal() {
                       of{" "}
                       <span className="text-white font-semibold">
                         {filteredCredits.length}
-                      </span>{" "}
-                      credited works
+                      </span>
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex rounded-full border border-white/10 bg-black/50 p-1">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex rounded-full border border-white/10 bg-black/50 p-0.5 sm:p-1">
                   <button
                     onClick={() => setMode("constellation")}
-                    className={`orbis-press flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${
+                    className={`orbis-press flex items-center gap-1 rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs ${
                       mode === "constellation"
                         ? "bg-cyan-400 text-black font-medium"
                         : "text-zinc-300"
                     }`}
                   >
-                    <Orbit className="size-3.5" />
-                    Orbit
+                    <Orbit className="size-3 sm:size-3.5" />
+                    <span>Orbit</span>
                   </button>
                   <button
                     onClick={() => setMode("tree")}
-                    className={`orbis-press flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${
+                    className={`orbis-press flex items-center gap-1 rounded-full px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs ${
                       mode === "tree"
                         ? "bg-amber-400 text-black font-medium"
                         : "text-zinc-300"
                     }`}
                   >
-                    <GitBranch className="size-3.5" />
-                    Timeline ({filteredCredits.length})
+                    <GitBranch className="size-3 sm:size-3.5" />
+                    <span>Tree ({filteredCredits.length})</span>
                   </button>
                 </div>
 
-                <Dialog.Close className="orbis-press rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white">
+                <Dialog.Close className="orbis-press rounded-full p-1.5 sm:p-2 text-zinc-400 hover:bg-white/10 hover:text-white">
                   <X className="size-4" />
                 </Dialog.Close>
               </div>
             </div>
 
-            {/* Department Pills + Search + Orbit Note */}
-            <div className="flex flex-col gap-2.5 px-4 sm:px-5 py-3 border-b border-white/5 bg-black/30 shrink-0">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-1.5">
+            {/* Compact Single-Row Scrollable Department Pills + Search */}
+            <div className="flex flex-col gap-2 px-3.5 sm:px-5 py-2.5 border-b border-white/5 bg-black/30 shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                   <button
                     onClick={() => setRoleFilter("all")}
-                    className={`orbis-press rounded-full px-3 py-1 text-xs border tabular-nums ${
+                    className={`orbis-press whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] sm:text-xs border tabular-nums shrink-0 ${
                       roleFilter === "all"
                         ? "border-white bg-white text-black font-medium"
                         : "border-white/10 text-zinc-400 hover:text-white"
@@ -258,7 +274,7 @@ export function PersonConstellationModal() {
                       <button
                         key={dept}
                         onClick={() => setRoleFilter(dept)}
-                        className={`orbis-press rounded-full px-3 py-1 text-xs border tabular-nums ${
+                        className={`orbis-press whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] sm:text-xs border tabular-nums shrink-0 ${
                           roleFilter === dept
                             ? "border-white bg-white text-black font-medium"
                             : "border-white/10 text-zinc-400 hover:text-white"
@@ -270,47 +286,45 @@ export function PersonConstellationModal() {
                   })}
                 </div>
 
-                <OrbisSwitch
-                  checked={hideTalkArchive}
-                  onCheckedChange={setHideTalkArchive}
-                  label="Hide Talk Shows & Archive"
-                />
+                <div className="hidden md:block shrink-0">
+                  <OrbisSwitch
+                    checked={hideTalkArchive}
+                    onCheckedChange={setHideTalkArchive}
+                    label="Hide Talk & Archive"
+                  />
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2.5">
-                <div className="relative flex-1 min-w-[200px]">
+              <div className="flex items-center justify-between gap-2">
+                <div className="relative flex-1 min-w-0">
                   <Search className="size-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Filter by title, character, or year…"
-                    className="w-full rounded-xl bg-black/45 border border-white/10 pl-8 pr-3 py-1.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-cyan-400/50"
+                    className="w-full rounded-xl bg-black/45 border border-white/10 pl-8 pr-3 py-1 text-xs sm:text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-cyan-400/50"
                   />
                 </div>
 
-                {mode === "constellation" && filteredCredits.length > 22 && (
-                  <button
-                    onClick={() => setMode("tree")}
-                    className="orbis-press rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[11px] font-mono text-amber-200 hover:bg-amber-400/20"
-                  >
-                    Top 22 in Orbit · Open all {filteredCredits.length} →
-                  </button>
-                )}
-
-                <div className="hidden sm:flex items-center gap-3 font-mono text-[10px] text-zinc-400">
-                  <span className="flex items-center gap-1">
-                    <span className="size-2 rounded-full bg-amber-400" />{" "}
-                    Watched
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="size-2 rounded-full bg-cyan-400" />{" "}
-                    Watchlist
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="size-2 rounded-full bg-zinc-600" /> Unseen
-                  </span>
+                <div className="md:hidden shrink-0">
+                  <OrbisSwitch
+                    checked={hideTalkArchive}
+                    onCheckedChange={setHideTalkArchive}
+                    label="No Talk"
+                  />
                 </div>
+
+                {mode === "constellation" &&
+                  filteredCredits.length > maxOrbitCount && (
+                    <button
+                      onClick={() => setMode("tree")}
+                      className="orbis-press hidden sm:inline-flex rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[11px] font-mono text-amber-200 hover:bg-amber-400/20 shrink-0"
+                    >
+                      Top {maxOrbitCount} in Orbit · Open all{" "}
+                      {filteredCredits.length} →
+                    </button>
+                  )}
               </div>
             </div>
 
@@ -322,7 +336,7 @@ export function PersonConstellationModal() {
             >
               {loading ? (
                 <div className="h-full flex items-center justify-center">
-                  <div className="size-40 rounded-full border border-cyan-400/20 animate-ping" />
+                  <div className="size-36 rounded-full border border-cyan-400/20 animate-ping" />
                 </div>
               ) : failed ? (
                 <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
@@ -351,8 +365,8 @@ export function PersonConstellationModal() {
                     <ellipse
                       cx="50"
                       cy="50"
-                      rx="23"
-                      ry="22"
+                      rx="22"
+                      ry="21"
                       fill="none"
                       stroke="rgba(255,255,255,0.07)"
                       strokeDasharray="0.8 0.8"
@@ -361,7 +375,7 @@ export function PersonConstellationModal() {
                       cx="50"
                       cy="50"
                       rx="39"
-                      ry="36"
+                      ry="37"
                       fill="none"
                       stroke="rgba(255,255,255,0.05)"
                     />
@@ -388,7 +402,7 @@ export function PersonConstellationModal() {
 
                   {/* Center Star Portrait */}
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
-                    <div className="size-14 sm:size-18 rounded-full overflow-hidden border-2 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] bg-[#0d1017]">
+                    <div className="size-13 sm:size-18 rounded-full overflow-hidden border-2 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] bg-[#0d1017]">
                       {person?.profilePath ? (
                         <img
                           src={`/api/poster?path=${encodeURIComponent(person.profilePath)}&size=w185`}
@@ -396,7 +410,7 @@ export function PersonConstellationModal() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User className="size-8 m-auto mt-4 text-zinc-400" />
+                        <User className="size-7 m-auto mt-3 text-zinc-400" />
                       )}
                     </div>
                   </div>
@@ -405,7 +419,7 @@ export function PersonConstellationModal() {
                   {orbitNodes.map(({ credit, x, y }) => {
                     const e = entryMap.get(credit.key);
                     const ringClass = !e
-                      ? "border-white/15 opacity-80 hover:opacity-100"
+                      ? "border-white/15 opacity-85 hover:opacity-100"
                       : e.status === "watchlist"
                         ? "border-cyan-400 shadow-[0_0_16px_rgba(56,189,248,0.35)]"
                         : "border-amber-400 shadow-[0_0_18px_rgba(245,158,11,0.4)]";
@@ -422,24 +436,37 @@ export function PersonConstellationModal() {
                           title={credit.title}
                           category={credit.category}
                           size="w185"
-                          className={`w-9 h-13 sm:w-11 sm:h-16 rounded-lg border transition-transform group-hover:scale-115 ${ringClass}`}
+                          className={`w-9 h-13 sm:w-11 sm:h-16 rounded-lg border transition-transform group-hover:scale-110 ${ringClass}`}
                         />
-                        <span className="mt-1 max-w-[90px] truncate rounded bg-black/85 px-1.5 py-0.5 text-[10px] text-zinc-200 border border-white/5">
+                        <span className="mt-0.5 max-w-[76px] sm:max-w-[92px] truncate rounded bg-black/85 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-zinc-200 border border-white/5">
                           {credit.title}
                         </span>
                       </button>
                     );
                   })}
+
+                  {/* Mobile bottom pill to switch to full Timeline Tree */}
+                  {filteredCredits.length > maxOrbitCount && (
+                    <div className="sm:hidden absolute bottom-2.5 inset-x-0 z-20 flex justify-center">
+                      <button
+                        onClick={() => setMode("tree")}
+                        className="orbis-press rounded-full bg-black/85 border border-amber-400/35 px-3 py-1 text-[10px] font-mono text-amber-200"
+                      >
+                        Top {maxOrbitCount} shown · View all{" "}
+                        {filteredCredits.length} in Tree →
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="p-5 sm:p-7">
-                  <div className="relative border-l border-white/15 pl-6 space-y-6">
+                <div className="p-4 sm:p-7">
+                  <div className="relative border-l border-white/15 pl-5 sm:pl-6 space-y-6">
                     {groupedByYear.map(([bucket, items]) => {
                       const isUpcomingBucket = bucket === "Upcoming / TBA";
                       return (
                         <div key={bucket} className="relative">
                           <span
-                            className={`absolute -left-[29px] top-1 size-2.5 rounded-full ring-4 ring-[#0d1017] ${
+                            className={`absolute -left-[25px] sm:-left-[29px] top-1 size-2.5 rounded-full ring-4 ring-[#0d1017] ${
                               isUpcomingBucket
                                 ? "bg-amber-400 shadow-[0_0_10px_#f59e0b]"
                                 : "bg-cyan-400"
