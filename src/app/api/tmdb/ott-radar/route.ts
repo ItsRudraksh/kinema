@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllEntries, readDb } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
+import { getAllEntries, getUserRegion } from "@/lib/db";
 import { checkWatchlistOttRadar } from "@/lib/tmdb";
 
 export async function GET(req: NextRequest) {
-  const [entries, db] = await Promise.all([getAllEntries(), readDb()]);
-  const region = req.nextUrl.searchParams.get("region") || db.region || "IN";
+  const { userId } = await auth();
+  const [entries, savedRegion] = await Promise.all([
+    getAllEntries(userId),
+    getUserRegion(userId),
+  ]);
+  const region = req.nextUrl.searchParams.get("region") || savedRegion || "IN";
   const items = await checkWatchlistOttRadar(entries, region);
   return NextResponse.json({ items, region });
 }

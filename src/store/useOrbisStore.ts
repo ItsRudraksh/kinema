@@ -52,6 +52,7 @@ interface OrbisState {
     entries: DiaryEntry[];
     cosmosNodes: CosmosNode[];
     region: string;
+    replace?: boolean;
   }) => void;
   setLens: (lens: GlobeLens) => void;
   setExplored: (explored: boolean) => void;
@@ -155,12 +156,15 @@ export const useOrbisStore = create<OrbisState>()(
       spinWinnerNode: null,
       loadingCosmos: false,
 
-      hydrate: ({ entries: serverEntries, cosmosNodes, region }) => {
-        const merged = mergeEntriesByTimestamp(get().entries, serverEntries);
+      hydrate: ({ entries: serverEntries, cosmosNodes, region, replace }) => {
+        const shouldReplace = replace ?? serverEntries.length > 0;
+        const nextEntries = shouldReplace
+          ? serverEntries
+          : mergeEntriesByTimestamp(get().entries, serverEntries);
         set({
-          entries: merged,
-          cosmosNodes: mergeCosmosWithEntries(cosmosNodes, merged),
-          region: get().region || region,
+          entries: nextEntries,
+          cosmosNodes: mergeCosmosWithEntries(cosmosNodes, nextEntries),
+          region: region || get().region || "IN",
         });
       },
 
@@ -236,7 +240,6 @@ export const useOrbisStore = create<OrbisState>()(
           cosmosNodes: mergeCosmosWithEntries(s.cosmosNodes, updated),
         }));
 
-        // Sync to local disk when running locally; never fail client save on Vercel
         void fetch("/api/diary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

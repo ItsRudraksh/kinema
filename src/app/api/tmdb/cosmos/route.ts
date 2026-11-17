@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllEntries, readDb } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
+import { getAllEntries, getUserRegion } from "@/lib/db";
 import { fetchStarterCosmos } from "@/lib/tmdb";
 import type { CosmosNode } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
+  const { userId } = await auth();
   const page = Number(req.nextUrl.searchParams.get("page") || "1") || 1;
-  const [entries, db] = await Promise.all([getAllEntries(), readDb()]);
+  const [entries, region] = await Promise.all([
+    getAllEntries(userId),
+    getUserRegion(userId),
+  ]);
 
   const seeds = entries
     .filter((e) => (e.rating ?? 0) >= 4 || e.favorite)
@@ -41,6 +46,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     nodes: Array.from(map.values()).slice(0, 144),
-    region: db.region,
+    region,
   });
 }

@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { Suspense } from "react";
+import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import {
   motion,
   AnimatePresence,
@@ -146,11 +148,13 @@ export function HeroCosmos() {
         {/* Top Chrome Bar */}
         <header className="relative z-20 flex items-center justify-between px-4 sm:px-8 pt-[max(0.85rem,env(safe-area-inset-top))] pb-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="size-8 rounded-full border border-white/15 bg-white/5 flex items-center justify-center shrink-0">
-              <span className="size-2 rounded-full bg-amber-400 shadow-[0_0_12px_#f59e0b]" />
-            </div>
+            <img
+              src="/brand/kinema-mark.svg"
+              alt="Kinema"
+              className="size-8 shrink-0"
+            />
             <div>
-              <span className="font-serif text-xl tracking-tight text-white">
+              <span className="font-serif text-xl tracking-wide text-white">
                 KINEMA
               </span>
               <span className="hidden md:inline-block ml-2.5 text-[11px] font-mono uppercase tracking-[0.2em] text-zinc-400">
@@ -246,6 +250,25 @@ export function HeroCosmos() {
                   </Tooltip.Positioner>
                 </Tooltip.Portal>
               </Tooltip.Root>
+              <Suspense fallback={null}>
+                <Show when="signed-out">
+                  <SignInButton mode="modal">
+                    <button className="orbis-press orbis-glass rounded-full px-3.5 py-2 text-xs font-medium text-white hover:border-white/30 min-h-[38px]">
+                      Sign In
+                    </button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <button className="orbis-press hidden sm:inline-flex items-center rounded-full bg-amber-400 text-black px-3.5 py-2 text-xs font-semibold min-h-[38px]">
+                      Sign Up
+                    </button>
+                  </SignUpButton>
+                </Show>
+                <Show when="signed-in">
+                  <div className="orbis-glass rounded-full p-1 flex items-center justify-center">
+                    <UserButton />
+                  </div>
+                </Show>
+              </Suspense>
             </div>
           </Tooltip.Provider>
         </header>

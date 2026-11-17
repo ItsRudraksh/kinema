@@ -4,14 +4,14 @@ import {
   Instrument_Serif,
   Space_Mono,
 } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
+import { PwaManager } from "@/components/PwaManager";
 import "./globals.css";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
   "https://kinema-atlas.vercel.app";
-
-const BRAND_BG = "#010206";
 
 const instrumentSerif = Instrument_Serif({
   weight: "400",
@@ -33,52 +33,39 @@ const spaceMono = Space_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-
   title: {
-    default: "KINEMA — Living Cinema Atlas & Film Diary",
+    default: "KINEMA — Living Cinema Atlas & Screening Diary",
     template: "%s · KINEMA",
   },
-
   description:
-    "An interactive 3D cinema atlas and personal screening diary for films, web series, anime, and dramas.",
-
+    "An interactive 3D WebGL cinema globe and personal screening diary for films, web series, anime, and dramas — featuring holographic core exploration, actor constellations, saga roadmaps, spin-the-globe randomizers, and live OTT release radar.",
   applicationName: "KINEMA",
-
-  keywords: [
-    "KINEMA",
-    "movie diary",
-    "film journal",
-    "cinema atlas",
-    "3D movie globe",
-    "anime tracker",
-    "web series tracker",
-    "K-drama tracker",
-    "OTT watchlist",
-    "TMDB movie app",
-  ],
-
-  authors: [{ name: "KINEMA" }],
-  creator: "KINEMA",
-
-  alternates: {
-    canonical: "/",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "KINEMA",
+    title: "KINEMA — Your Life in Cinema, in Orbit",
+    description:
+      "Spin a curved 3D movie cosmos, step inside a holographic film universe, map actor constellations, and log films, series, anime & dramas.",
+    images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
-
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
+  twitter: {
+    card: "summary_large_image",
+    title: "KINEMA — Living Cinema Atlas & Screening Diary",
+    images: ["/brand/og-image.png"],
   },
-
+  appleWebApp: {
+    capable: true,
+    title: "KINEMA",
+    statusBarStyle: "black-translucent",
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
       { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/icons/icon-48x48.png", sizes: "48x48", type: "image/png" },
       { url: "/icons/icon-96x96.png", sizes: "96x96", type: "image/png" },
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
@@ -93,33 +80,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-
-  openGraph: {
-    type: "website",
-    url: "/",
-    siteName: "KINEMA",
-    title: "KINEMA — Your Life in Cinema, in Orbit",
-    description:
-      "Explore an interactive 3D cinema cosmos, actor constellations, saga roadmaps, OTT radar, and your personal screening diary.",
-    locale: "en_US",
-  },
-
-  twitter: {
-    card: "summary_large_image",
-    title: "KINEMA — Living Cinema Atlas & Film Diary",
-    description:
-      "Interactive 3D cinema globe, actor constellations, OTT radar and personal film journal.",
-  },
-
-  appleWebApp: {
-    capable: true,
-    title: "KINEMA",
-    statusBarStyle: "black-translucent",
-  },
-
-  formatDetection: {
-    telephone: false,
-  },
 };
 
 export const viewport: Viewport = {
@@ -128,27 +88,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: BRAND_BG },
-    { media: "(prefers-color-scheme: light)", color: BRAND_BG },
+    { media: "(prefers-color-scheme: dark)", color: "#010206" },
+    { media: "(prefers-color-scheme: light)", color: "#010206" },
   ],
-};
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: "KINEMA",
-  alternateName: "KINEMA Cinema Atlas",
-  url: SITE_URL,
-  applicationCategory: "EntertainmentApplication",
-  operatingSystem: "Any",
-  browserRequirements: "Requires WebGL2 and a modern browser",
-  description:
-    "Interactive 3D cinema atlas and personal screening diary for films, TV series, anime, and dramas.",
-  offers: {
-    "@type": "Offer",
-    price: "0",
-    priceCurrency: "USD",
-  },
 };
 
 export default function RootLayout({
@@ -162,16 +104,11 @@ export default function RootLayout({
       className={`dark ${instrumentSerif.variable} ${instrumentSans.variable} ${spaceMono.variable}`}
     >
       <body>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-          }}
-        />
-
-        <div className="root">{children}</div>
-
-        <Toaster theme="dark" richColors position="bottom-right" />
+        <ClerkProvider>
+          <div className="root">{children}</div>
+          <PwaManager />
+          <Toaster theme="dark" richColors position="bottom-right" />
+        </ClerkProvider>
       </body>
     </html>
   );
